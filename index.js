@@ -1,9 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { OpenAI } from 'openai';
-
-dotenv.config();
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+const { OpenAI } = require('openai');
 
 const app = express();
 app.use(cors());
@@ -13,16 +11,35 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// In-memory history (replace with DB in production)
+const chatHistories = {};
+
 app.post('/api/chat', async (req, res) => {
-  const userMessage = req.body.message;
+  const { message, userId } = req.body;
+
+  if (!message || !userId) {
+    return res.status(400).json({ reply: "Missing message or userId" });
+  }
+
+  // Ensure user has history
+  if (!chatHistories[userId]) {
+    chatHistories[userId] = [];
+  }
+
+  // Push user message to history
+  chatHistories[userId].push({ role: 'user', content: message });
 
   try {
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [{ role: 'user', content: userMessage }],
+      messages: chatHistories[userId], // send full history
     });
 
-    const reply = response.choices[0].message.content;
+    const reply = completion.choices[0].message.content;
+
+    // Add AI reply to history
+    chatHistories[userId].push({ role: 'assistant', content: reply });
+
     res.json({ reply });
   } catch (err) {
     console.error(err.response?.data || err.message);
@@ -30,7 +47,5 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
