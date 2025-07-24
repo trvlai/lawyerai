@@ -1,7 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-const { OpenAI } = require('openai');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { OpenAI } from 'openai';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -11,7 +13,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// In-memory history (replace with DB in production)
+// In-memory chat history (for demonstration only)
 const chatHistories = {};
 
 app.post('/api/chat', async (req, res) => {
@@ -21,23 +23,20 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ reply: "Missing message or userId" });
   }
 
-  // Ensure user has history
   if (!chatHistories[userId]) {
     chatHistories[userId] = [];
   }
 
-  // Push user message to history
   chatHistories[userId].push({ role: 'user', content: message });
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: chatHistories[userId], // send full history
+      messages: chatHistories[userId],
     });
 
     const reply = completion.choices[0].message.content;
 
-    // Add AI reply to history
     chatHistories[userId].push({ role: 'assistant', content: reply });
 
     res.json({ reply });
