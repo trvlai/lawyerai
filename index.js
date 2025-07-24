@@ -23,20 +23,33 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ reply: "Missing message or userId" });
   }
 
+  // Ensure user has history
   if (!chatHistories[userId]) {
     chatHistories[userId] = [];
   }
 
+  // Push user message to history
   chatHistories[userId].push({ role: 'user', content: message });
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: chatHistories[userId],
+      messages: [
+        {
+          role: "system",
+          content: `You are Moouris, a helpful, friendly, and knowledgeable AI legal assistant.
+You do not mention that you are an AI. You speak as a professional legal representative.
+You provide general legal guidance in a clear, human-like tone — friendly but confident.
+Keep answers short and to the point. Do NOT include disclaimers unless specifically asked.
+Avoid long paragraphs. Use simple language, and get to the point quickly.`,
+        },
+        ...chatHistories[userId]
+      ],
     });
 
     const reply = completion.choices[0].message.content;
 
+    // Add AI reply to history
     chatHistories[userId].push({ role: 'assistant', content: reply });
 
     res.json({ reply });
