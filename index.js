@@ -91,7 +91,7 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4.1-mini',
       messages: [
         { role: "system", content: systemPrompt },
         ...chatHistories[userId],
